@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RCA Chaser: Online Edition</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* Prevents scroll/zoom on mobile */
+        }
+
+        /* --- UI LAYER --- */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        /* HUD (Score, CV, High Score) */
+        #hud-container {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box;
+            display: none;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 5;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+        }
+
+        .hud-left { text-align: left; }
+        .hud-right { text-align: right; }
+
+        .hud-text { font-size: 20px; display: block; margin-bottom: 5px; }
+        #score-box { color: #fff; text-shadow: 2px 2px 0 #000; }
+        #cv-box { color: #ffd700; text-shadow: 0 0 10px #ffd700, 2px 2px 0 #000; }
+        #high-score-box { color: #00ff88; font-size: 16px; text-shadow: 1px 1px 0 #000; }
+
+        /* MENU LOGO */
+        #logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+            pointer-events: auto;
+        }
+
+        #menu-chaser-img {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            border: 4px solid #ff3333;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.6);
+            object-fit: cover;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        #game-title {
+            font-size: 36px;
+            color: white;
+            font-weight: 900;
+            margin-top: 15px;
+            text-shadow: 0 0 10px red;
+            letter-spacing: 2px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* BUTTONS */
+        .game-btn {
+            pointer-events: auto;
+            padding: 15px 40px;
+            font-size: 22px;
+            background: linear-gradient(180deg, #ffd700, #ffaa00);
+            color: #000;
+            border: 3px solid #fff;
+            border-radius: 50px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+            transition: transform 0.1s;
+            margin-top: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .game-btn:active { transform: scale(0.95); }
+
+        /* WhatsApp Button */
+        .whatsapp-btn {
+            background: linear-gradient(180deg, #25D366, #128C7E);
+            color: white;
+            font-size: 18px;
+            padding: 12px 30px;
+            border: 2px solid white;
+            box-shadow: 0 0 15px rgba(37, 211, 102, 0.6);
+        }
+
+        /* RAND TEXT */
+        #rand-text {
+            font-size: 80px;
+            color: #00ff88;
+            font-weight: 900;
+            display: none;
+            text-shadow: 0 0 20px #00ff88;
+            text-align: center;
+        }
+
+        /* OVERLAYS */
+        .overlay-screen {
+            display: none;
+            background: rgba(0, 0, 0, 0.95);
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            z-index: 20;
+            pointer-events: auto;
+        }
+
+        #rca-text {
+            font-size: 60px;
+            color: #ff3333;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 10px;
+            animation: shake 0.5s infinite;
+        }
+
+        #final-score {
+            font-size: 24px;
+            color: white;
+            margin-bottom: 20px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .disclaimer {
+            position: absolute;
+            bottom: 20px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: center;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -2px); } 100% { transform: translate(1px, -1px); } }
+    </style>
+</head>
+<body>
+
+    <div id="hud-container">
+        <div class="hud-left">
+            <div id="score-box" class="hud-text">SCORE: <span id="score-val">0</span></div>
+            <div id="high-score-box" class="hud-text">BEST: <span id="high-score-val">0</span></div>
+        </div>
+        <div class="hud-right">
+            <div id="cv-box" class="hud-text">CV: <span id="cv-val">0</span></div>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div id="logo-container">
+            <img id="menu-chaser-img" src="sir.jpg" alt="Sir">
+            <div id="game-title">RCA CHASER</div>
+        </div>
+        
+        <button id="start-btn" class="game-btn">START GAME</button>
+        
+        <div id="rand-text">RAND BETWEEN</div>
+
+        <div class="disclaimer">Educational purpose only.</div>
+    </div>
+
+    <div id="game-over" class="overlay-screen">
+        <div id="rca-text">RCA FAILED</div>
+        <div id="final-score">Score: 0</div>
+        
+        <button class="game-btn" onclick="location.reload()">RETRY</button>
+        
+        <a id="share-btn" class="game-btn whatsapp-btn" href="#" target="_blank">
+            CHALLENGE FRIENDS
+        </a>
+        
+        <div class="disclaimer">Educational purpose only.</div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // UI Elements
+        const uiLayer = document.getElementById('ui-layer');
+        const logoContainer = document.getElementById('logo-container');
+        const startBtn = document.getElementById('start-btn');
+        const randText = document.getElementById('rand-text');
+        
+        const hudContainer = document.getElementById('hud-container');
+        const scoreVal = document.getElementById('score-val');
+        const cvVal = document.getElementById('cv-val');
+        const highScoreVal = document.getElementById('high-score-val');
+        
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreText = document.getElementById('final-score');
+        const shareBtn = document.getElementById('share-btn');
+
+        // Load Image (Ensuring it looks for sir.jpg)
+        const alekhImg = new Image();
+        let imageLoaded = false;
+        alekhImg.src = 'sir.jpg';
+        alekhImg.onload = () => { imageLoaded = true; };
+
+        // Game State
+        let gameRunning = false;
+        let score = 0;
+        let cvPoints = 0;
+        let speed = 7;
+        let laneWidth = 0;
+        let lanes = [];
+        
+        // High Score
+        let highScore = 0;
+        try {
+            highScore = localStorage.getItem('rca_high_score') || 0;
+        } catch(e) { console.log('Storage not available'); }
+        highScoreVal.innerText = highScore;
+
+        // Entities
+        let player = { lane: 1, y: 0, color: '#00ccff' };
+        let chaser = { y: 0 };
+        let obstacles = [];
+        let coins = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            laneWidth = canvas.width / 3;
+            lanes = [laneWidth/2, laneWidth + laneWidth/2, 2*laneWidth + laneWidth/2];
+            player.y = canvas.height - 200;
+            chaser.y = canvas.height - 70;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            if (e.key === 'ArrowLeft' && player.lane > 0) player.lane--;
+            if (e.key === 'ArrowRight' && player.lane < 2) player.lane++;
+        });
+
+        document.addEventListener('mousedown', handleInput);
+        document.addEventListener('touchstart', handleInput, {passive: false});
+
+        function handleInput(e) {
+            if (!gameRunning) return;
+            // Prevent default behavior if needed, but carefully
+            // e.preventDefault(); 
+            
+            const x = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+            if (x < window.innerWidth / 2) {
+                if (player.lane > 0) player.lane--;
+            } else {
+                if (player.lane < 2) player.lane++;
+            }
+        }
+
+        // Start Sequence
+        startBtn.addEventListener('click', () => {
+            logoContainer.style.display = 'none';
+            startBtn.style.display = 'none';
+            document.querySelector('#ui-layer .disclaimer').style.display = 'none';
+            runRandBetweenSequence();
+        });
+
+        function runRandBetweenSequence() {
+            randText.style.display = 'block';
+            let state = 0;
+            const interval = setInterval(() => {
+                if (state % 2 === 0) {
+                    randText.innerText = "RAND";
+                    randText.style.color = "#fff";
+                } else {
+                    randText.innerText = "BETWEEN";
+                    randText.style.color = "#00ff88";
+                }
+                state++;
+                if (state > 6) {
+                    clearInterval(interval);
+                    randText.style.display = 'none';
+                    startGame();
+                }
+            }, 350);
+        }
+
+        function startGame() {
+            obstacles = [];
+            coins = [];
+            score = 0;
+            cvPoints = 0;
+            speed = 7;
+            player.lane = 1;
+            
+            scoreVal.innerText = "0";
+            cvVal.innerText = "0";
+            hudContainer.style.display = 'flex';
+            
+            gameRunning = true;
+            loop();
+        }
+
+        // --- GAME LOOP ---
+        function loop() {
+            if (!gameRunning) return;
+
+            // BG
+            ctx.fillStyle = "#1a1a1a";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Lanes
+            ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.beginPath();
+            ctx.moveTo(laneWidth, 0); ctx.lineTo(laneWidth, canvas.height);
+            ctx.moveTo(laneWidth*2, 0); ctx.lineTo(laneWidth*2, canvas.height);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.fillRect(laneWidth, 0, laneWidth, canvas.height);
+
+            // Obstacles
+            if (Math.random() < 0.02) spawnObstacle();
+            obstacles.forEach((obs, index) => {
+                obs.y += speed;
+                drawObstacle(lanes[obs.lane], obs.y);
+                
+                // Collision
+                if (obs.lane === player.lane && obs.y > player.y - 60 && obs.y < player.y + 60) {
+                    endGame();
+                }
+                
+                // Pass
+                if (obs.y > canvas.height) {
+                    obstacles.splice(index, 1);
+                    score += 10;
+                    scoreVal.innerText = score;
+                    if(score % 200 === 0) speed += 0.5;
+                }
+            });
+
+            // Coins
+            if (Math.random() < 0.04) spawnCoin();
+            coins.forEach((coin, index) => {
+                coin.y += speed;
+                drawCoin(lanes[coin.lane], coin.y);
+                
+                // Collection
+                const dx = lanes[coin.lane] - lanes[player.lane];
+                const dy = coin.y - player.y;
+                if (Math.sqrt(dx*dx + dy*dy) < 60) {
+                    coins.splice(index, 1);
+                    cvPoints++;
+                    cvVal.innerText = cvPoints;
+                    score += 50;
+                    scoreVal.innerText = score;
+                } else if (coin.y > canvas.height) {
+                    coins.splice(index, 1);
+                }
+            });
+
+            // Player
+            const px = lanes[player.lane];
+            ctx.fillStyle = player.color; ctx.shadowBlur = 20; ctx.shadowColor = player.color;
+            ctx.beginPath(); ctx.arc(px, player.y, 25, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+
+            // Chaser
+            const ax = lanes[player.lane] + (Math.random()*4 - 2);
+            drawSpeechBubble(ax, chaser.y - 55, "NO ONE GOING HOME!");
+            
+            ctx.save(); ctx.beginPath(); ctx.arc(ax, chaser.y, 45, 0, Math.PI*2); ctx.clip();
+            if (imageLoaded) ctx.drawImage(alekhImg, ax-45, chaser.y-45, 90, 90);
+            else { ctx.fillStyle = '#fff'; ctx.fill(); }
+            ctx.restore();
+            
+            ctx.strokeStyle = '#ff3333'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(ax, chaser.y, 45, 0, Math.PI*2); ctx.stroke();
+
+            requestAnimationFrame(loop);
+        }
+
+        // --- HELPERS ---
+        function drawSpeechBubble(x, y, text) {
+            const shakeX = Math.random() * 2 - 1; const shakeY = Math.random() * 2 - 1;
+            ctx.save(); ctx.translate(x + shakeX, y + shakeY);
+            ctx.fillStyle = 'white'; ctx.strokeStyle = 'black'; ctx.lineWidth = 2;
+            const w = 180, h = 30;
+            ctx.beginPath(); ctx.rect(-w/2, -h, w, h); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.lineTo(0, 10); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = 'black'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 0, -h/2);
+            ctx.restore();
+        }
+
+        function drawObstacle(x, y) {
+            const size = 70; const half = size / 2;
+            ctx.fillStyle = '#b30000'; ctx.fillRect(x - half, y, size, size);
+            ctx.lineWidth = 3; ctx.strokeStyle = '#ff6666'; ctx.strokeRect(x - half, y, size, size);
+            ctx.strokeStyle = '#000'; ctx.beginPath();
+            ctx.moveTo(x - half + 10, y + 10); ctx.lineTo(x + half - 10, y + size - 10);
+            ctx.moveTo(x + half - 10, y + 10); ctx.lineTo(x - half + 10, y + size - 10); ctx.stroke();
+        }
+
+        function drawCoin(x, y) {
+            ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#b39700'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI*2); ctx.stroke();
+            ctx.fillStyle = '#000'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText("CV", x, y);
+        }
+
+        function spawnObstacle() {
+            const lane = Math.floor(Math.random() * 3);
+            obstacles.push({ lane: lane, y: -100 });
+        }
+
+        function spawnCoin() {
+            const lane = Math.floor(Math.random() * 3);
+            let safe = true;
+            obstacles.forEach(obs => { if (obs.lane === lane && obs.y < 100) safe = false; });
+            if (safe) coins.push({ lane: lane, y: -100 });
+        }
+
+        function endGame() {
+            gameRunning = false;
+            hudContainer.style.display = 'none';
+            gameOverScreen.style.display = 'flex';
+            
+            // 1. Update High Score (Local Storage)
+            if (score > highScore) {
+                highScore = score;
+                try {
+                    localStorage.setItem('rca_high_score', highScore);
+                } catch(e) {}
+            }
+            highScoreVal.innerText = highScore;
+            finalScoreText.innerText = "Score: " + score + " | Best: " + highScore;
+
+            // 2. WhatsApp Share Link
+            const gameLink = window.location.href; 
+            const msg = `I scored ${score} points in RCA Chaser! Can you beat me? Play here: ${gameLink}`;
+            shareBtn.href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        }
+    </script>
+</body>
+</html>
